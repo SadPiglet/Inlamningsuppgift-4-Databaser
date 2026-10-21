@@ -35,37 +35,60 @@ def create_tables(connection):
 
   connection.commit()
 
-def generate_personal_number(date_of_birth):
+def generate_personal_number(connection, date_of_birth):
   date_parts = date_of_birth.split("-")
 
   year = date_parts[0]
   month = date_parts[1]
   day = date_parts[2]
 
-  return f"{year[-2:]}{month}{day}-0000"
+  date_prefix = f"{year[-2:]}{month}{day}"
+
+  cursor = connection.execute("""
+    SELECT personal_number
+    FROM Users
+    WHERE personal_number LIKE ?
+  """, (f"{date_prefix}-%",))
+
+  existing_numbers = cursor.fetchall()
+  next_number = len(existing_numbers) + 1
+
+  return f"{date_prefix}-{next_number:04d}"
 
 
 def add_user(connection):
   first_name = input("Enter first name: ").strip()
   last_name = input("Enter last name: ").strip()
   date_of_birth = input("Enter date of birth (YYYY-MM-DD): ").strip()
-  age = calculate_age(date_of_birth)
-  print(f"User's age is: {age}")
-  personal_number = generate_personal_number(date_of_birth)
 
-  connection.execute("""
-    INSERT INTO Users (
-      first_name, 
-      last_name, 
-      date_of_birth, 
-      personal_number
-    )
-    VALUES (?, ?, ?, ?)
-  """, (first_name, last_name, date_of_birth, personal_number))
+  if not first_name or not last_name or not date_of_birth:
+    print("All fields are required.")
+    return
 
-  connection.commit()
+  try:
+    age = calculate_age(date_of_birth)
+    personal_number = generate_personal_number(connection, date_of_birth)
 
-  print(f"User {first_name} {last_name} added successfully.")
+    connection.execute("""
+      INSERT INTO Users (
+        first_name, 
+        last_name, 
+        date_of_birth, 
+        personal_number
+      )
+      VALUES (?, ?, ?, ?)
+    """, (first_name, last_name, date_of_birth, personal_number))
+
+    connection.commit()
+
+    print(f"User's age is: {age}")
+    print(f"User {first_name} {last_name} added successfully.")
+
+  except ValueError:
+    print("Error: Invalid date format. Please use YYYY-MM-DD.")
+
+  except sqlite3.IntegrityError:
+    print("Error: Personal number must be unique. This user may already exist.")
 
 
 connection = sqlite3.connect("users.db")
