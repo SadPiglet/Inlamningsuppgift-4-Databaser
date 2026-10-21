@@ -90,11 +90,87 @@ def add_user(connection):
   except sqlite3.IntegrityError:
     print("Error: Personal number must be unique. This user may already exist.")
 
+def add_summer_trip(connection):
+  print("\nRegistered Users:")
+
+  users = connection.execute("""
+    SELECT user_id, first_name, last_name
+    FROM Users
+    ORDER BY user_id
+  """).fetchall()
+
+  if not users:
+    print("No users found. Please add a user first.")
+    return
+
+  for user in users:
+    print(f"{user[0]}: {user[1]} {user[2]}")
+
+  try:
+    user_id = int(input("Enter the user ID for the summer trip: ").strip())
+  except ValueError:
+    print("Error: Invalid user ID. Please enter a valid integer.")
+    return
+
+  selected_user = connection.execute(
+    "SELECT user_id FROM Users WHERE user_id = ?", (user_id,)
+  ).fetchone()
+
+  if selected_user is None:
+    print("Error: User ID not found. Please select a valid user ID.")
+    return
+
+  airline = input("Enter airline: ").strip()
+  booking_number = input("Enter booking number: ").strip()
+
+  if not airline or not booking_number:
+    print("All fields are required.")
+    return
+
+  try:
+    connection.execute("""
+      INSERT INTO SummerTrips (
+        airline, 
+        booking_number, 
+        user_id
+      )
+      VALUES (?, ?, ?)
+    """, (airline, booking_number, user_id))
+
+    connection.commit()
+
+    print(f"Summer trip for user ID {user_id} added successfully.")
+
+  except sqlite3.IntegrityError:
+    print("Error: Booking number must be unique. This trip may already exist.")
+
+def show_first_three_users(connection):
+  print("\nFirst three registered users:")
+  users = connection.execute("""
+    SELECT user_id, first_name, last_name, date_of_birth, personal_number
+    FROM Users
+    ORDER BY user_id
+    LIMIT 3
+  """).fetchall()
+
+  if not users:
+    print("No users found.")
+    return
+
+  for user in users:
+    print(
+      f"ID: {user[0]}, "
+      f"Name: {user[1]} {user[2]}, "
+      f"Date of Birth: {user[3]}, "
+      f"Personal Number: {user[4]}"
+    )
 
 connection = sqlite3.connect("users.db")
 print("Database created and successfully connected to SQLite")
 
 create_tables(connection)
 add_user(connection)
+add_summer_trip(connection)
+show_first_three_users(connection)
 
 connection.close()
