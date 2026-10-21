@@ -165,12 +165,125 @@ def show_first_three_users(connection):
       f"Personal Number: {user[4]}"
     )
 
+def show_all_users(connection):
+  users = connection.execute("""
+    SELECT user_id, first_name, last_name, date_of_birth, personal_number
+    FROM Users
+    ORDER BY user_id
+  """).fetchall()
+
+  if not users:
+    print("No users found.")
+    return
+
+  print("\nAll registered users:")
+  for user in users:
+    print(
+      f"ID: {user[0]}, "
+      f"Name: {user[1]} {user[2]}, "
+      f"Date of Birth: {user[3]}, "
+      f"Personal Number: {user[4]}"
+    )
+# -- Meny --
+def manage_users(connection):
+  while True:
+    print("\n=== User Management Menu ===")
+    print("1. Add user")
+    print("2. Remove user")
+    print("3. Show all users")
+    print("4. Show first three users")
+    print("5. Back to Main Menu")
+
+    choice = input("Enter your choice (1-5): ").strip()
+
+    if choice == "1":
+      add_user(connection)
+    elif choice == "2":
+      remove_user(connection)
+    elif choice == "3":
+      show_all_users(connection)
+    elif choice == "4":
+      show_first_three_users(connection)
+    elif choice == "5":
+      break
+    else:
+      print("Invalid choice. Please try again.")
+
+def manage_summer_trips(connection):
+  while True:
+    print("\n=== Summer Trip Management Menu ===")
+    print("1. Add summer trip")
+    print("2. Remove summer trip")
+    print("3. Show all summer trips")
+    print("4. Back to Main Menu")
+
+    choice = input("Enter your choice (1-4): ").strip()
+
+    if choice == "1":
+      add_summer_trip(connection)
+    elif choice == "2":
+      remove_summer_trip(connection)
+    elif choice == "3":
+      show_all_summer_trips(connection)
+    elif choice == "4":
+      break
+    else:
+      print("Invalid choice. Please try again.")
+
+def view_database_information(connection):
+  while True:
+    print("\n=== Database Information Menu ===")
+    print("1. Show all users")
+    print("2. Show all summer trips with user information")
+    print("3. Show first three users")
+    print("4. Back to Main Menu")
+
+    choice = input("Enter your choice (1-4): ").strip()
+
+    if choice == "1":
+      show_all_users(connection)
+    elif choice == "2":
+      show_all_summer_trips(connection)
+    elif choice == "3":
+      show_first_three_users(connection)
+    elif choice == "4":
+      break
+    else:
+      print("Invalid choice. Please try again.")
+
+def main_menu(connection):
+  while True:
+    print("\n=== Main Menu ===")
+    print("1. Manage Users")
+    print("2. Manage Summer Trips")
+    print("3. View Database Information")
+    print("4. Exit")
+
+    choice = input("Enter your choice (1-4): ").strip()
+
+    if choice == "1":
+      manage_users(connection)
+    elif choice == "2":
+      manage_summer_trips(connection)
+    elif choice == "3":
+      view_database_information(connection)
+    elif choice == "4":
+      print("Goodbye!")
+      break
+    else:
+      print("Invalid choice. Please try again.")
+
 connection = sqlite3.connect("users.db")
 print("Database created and successfully connected to SQLite")
 
-create_tables(connection)
-add_user(connection)
-add_summer_trip(connection)
-show_first_three_users(connection)
+if __name__ == "__main__":
+  connection = sqlite3.connect("users.db")
 
-connection.close()
+  try:
+    connection.execute("PRAGMA foreign_keys = ON")
+    create_tables(connection)
+    print("Database connected and tables created successfully.")
+    main_menu(connection)
+  finally:
+    connection.close()
+    print("Database connection closed.")
