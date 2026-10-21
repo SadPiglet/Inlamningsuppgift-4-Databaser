@@ -55,7 +55,6 @@ def generate_personal_number(connection, date_of_birth):
 
   return f"{date_prefix}-{next_number:04d}"
 
-
 def add_user(connection):
   first_name = input("Enter first name: ").strip()
   last_name = input("Enter last name: ").strip()
@@ -89,6 +88,59 @@ def add_user(connection):
 
   except sqlite3.IntegrityError:
     print("Error: Personal number must be unique. This user may already exist.")
+
+def remove_user(connection):
+  users = connection.execute("""
+    SELECT user_id, first_name, last_name
+    FROM Users
+    ORDER BY user_id
+  """).fetchall()
+
+  if not users:
+    print("No users found. Please add a user first.")
+    return
+
+  print("\nRegistered Users:")
+  for user in users:
+    print(f"{user[0]}: {user[1]} {user[2]}")
+
+  try:
+    user_id = int(input("Enter the ID of the user to remove: ").strip())
+  except ValueError:
+    print("Error: Invalid user ID. Please enter a valid integer.")
+    return
+
+  user = connection.execute("""
+    SELECT first_name, last_name
+    FROM Users
+    WHERE user_id = ?
+  """, (user_id,)).fetchone()
+
+  if user is None:
+    print("Error: User ID not found. Please select a valid user ID.")
+    return
+
+  print(f"You have selected to remove user: {user[0]} {user[1]}")
+  confirm = input("Are you sure you want to remove this user? (yes/no): ").strip().lower()
+
+  if confirm != "yes":
+    print("User removal cancelled.")
+    return
+
+  try:
+    connection.execute("BEGIN")
+    connection.execute(
+      "DELETE FROM SummerTrips WHERE user_id = ?", (user_id,)
+    )
+    connection.execute(
+      "DELETE FROM Users WHERE user_id = ?", (user_id,)
+    )
+    connection.commit()
+    print(f"User {user[0]} {user[1]} and their associated summer trips removed successfully.")
+  except sqlite3.Error as error:
+    connection.rollback()
+    print(f"Error occurred while removing user: {error}")
+
 
 def add_summer_trip(connection):
   print("\nRegistered Users:")
@@ -166,6 +218,7 @@ def show_first_three_users(connection):
     )
 
 def show_all_users(connection):
+
   users = connection.execute("""
     SELECT user_id, first_name, last_name, date_of_birth, personal_number
     FROM Users
@@ -184,6 +237,77 @@ def show_all_users(connection):
       f"Date of Birth: {user[3]}, "
       f"Personal Number: {user[4]}"
     )
+
+def show_all_summer_trips(connection):
+  trips = connection.execute("""
+    SELECT st.trip_id, st.airline, st.booking_number, u.first_name, u.last_name
+    FROM SummerTrips st
+    JOIN Users u ON st.user_id = u.user_id
+    ORDER BY st.trip_id
+  """).fetchall()
+
+  if not trips:
+    print("No summer trips found.")
+    return
+
+  print("\nAll registered summer trips:")
+  for trip in trips:
+    print(
+      f"Trip ID: {trip[0]}, "
+      f"Airline: {trip[1]}, "
+      f"Booking Number: {trip[2]}, "
+      f"User: {trip[3]} {trip[4]}"
+    )
+
+def remove_summer_trip(connection):
+  trips = connection.execute("""
+    SELECT st.trip_id, st.airline, st.booking_number, u.first_name, u.last_name
+    FROM SummerTrips st
+    JOIN Users u ON st.user_id = u.user_id
+    ORDER BY st.trip_id
+  """).fetchall()
+
+  if not trips:
+    print("No summer trips found.")
+    return
+
+  print("\nRegistered Summer Trips:")
+  for trip in trips:
+    print(
+      f"{trip[0]}: Airline: {trip[1]}, "
+      f"Booking Number: {trip[2]}, "
+      f"User: {trip[3]} {trip[4]}"
+    )
+
+  try:
+    trip_id = int(input("Enter the ID of the summer trip to remove: ").strip())
+  except ValueError:
+    print("Error: Invalid trip ID. Please enter a valid integer.")
+    return
+
+  selected_trip = connection.execute(
+    "SELECT trip_id FROM SummerTrips WHERE trip_id = ?", (trip_id,)
+  ).fetchone()
+
+  if selected_trip is None:
+    print("Error: Trip ID not found. Please select a valid trip ID.")
+    return
+
+  confirm = input("Are you sure you want to remove this summer trip? (yes/no): ").strip().lower()
+
+  if confirm != "yes":
+    print("Summer trip removal cancelled.")
+    return
+
+  try:
+    connection.execute(
+      "DELETE FROM SummerTrips WHERE trip_id = ?", (trip_id,)
+    )
+    connection.commit()
+    print(f"Summer trip with ID {trip_id} removed successfully.")
+  except sqlite3.Error as error:
+    connection.rollback()
+    print(f"Error occurred while removing summer trip: {error}")
 # -- Meny --
 def manage_users(connection):
   while True:
